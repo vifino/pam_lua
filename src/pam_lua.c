@@ -137,6 +137,12 @@ static void ltable_push_str_func(lua_State* L, const char* key, lua_CFunction fu
 	lua_settable(L, -3);
 }
 
+static void ltable_push_str_bool(lua_State* L, const char* key, int value) {
+	lua_pushstring(L, key);
+	lua_pushboolean(L, value);
+	lua_settable(L, -3);
+}
+
 ////
 // Lua bindings
 ////
@@ -249,6 +255,23 @@ static int pam_lua_handler(char* pam_hook_type, pam_handle_t *pamh, int flags, i
 		}
 		
 		ltable_push_str(L, "type", pam_mod_type);
+
+		// Flags
+		lua_pushstring(L, "flag");
+		lua_newtable(L);
+		{
+			ltable_push_str_bool(L, "silent", flags & PAM_SILENT);
+			if (strcmp(pam_hook_type, "authenticate")) {
+				ltable_push_str_bool(L, "disallow_null_authtok", flags & PAM_DISALLOW_NULL_AUTHTOK);
+			} else if (strcmp(pam_hook_type, "setcred")) {
+				ltable_push_str_bool(L, "delete_cred", flags & PAM_DELETE_CRED);
+				ltable_push_str_bool(L, "reinitialize_cred", flags & PAM_REINITIALIZE_CRED);
+				ltable_push_str_bool(L, "refresh_cred", flags & PAM_REFRESH_CRED);
+			} else if (strcmp(pam_hook_type, "chauthtok")) {
+				ltable_push_str_bool(L, "change_expired_authtok", flags & PAM_CHANGE_EXPIRED_AUTHTOK);
+			}
+		}
+		lua_settable(L, -3);
 
 		// Args
 		lua_pushstring(L, "args");

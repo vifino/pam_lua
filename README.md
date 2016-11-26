@@ -48,6 +48,20 @@ end
     - `chauthtok`
   - You mostly have to only care about `authenticate`.
 
+- `active = pam.flag[name]`
+  - Checks if flag is active.
+  - Flags:
+    - `silent`: If the service should not generate any messages.
+    - when in pam hook `authenticate`:
+      - `disallow_null_authtok`: If the service should return `pam.ret.auth_error` when the auth token is null.
+    - when in pam hook `setcred`:
+      - `establish_cred`: set credentials
+      - `delete_cred`: delete credentials
+      - `reinitialize_cred`: reinitialize credentials, like resetting password
+      - `refresh_cred`: extend lifetime of credentials
+    - when in pam hook `chauthtok`:
+      - `change_expired_authtok`: only update those passwords if they have aged, otherwise update them unconditionally.
+
 - `user = pam.get_user([login_prompt])`
   - Returns the username, with prompt if not asked before.
 

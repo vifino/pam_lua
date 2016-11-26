@@ -6,6 +6,7 @@
 // Generic includes
 #include <stdlib.h>
 #include <string.h>
+#include <stdarg.h>
 // PAM
 #include <security/pam_appl.h>
 #include <security/pam_modules.h>
@@ -15,17 +16,32 @@
 #include <lualib.h>
 
 // Small helpers
-static char* concat_strings2(const char* str1, const char* str2) {
-	size_t str_res_len = strlen(str1) + strlen(str2);
-	char *res = (char*)malloc(str_res_len);
-	snprintf(res, str_res_len, "%s%s", str1, str2);
-	return res;
-}
-static char* concat_strings3(const char* str1, const char* str2, const char* str3) {
-	size_t str_res_len = strlen(str1) + strlen(str2) + strlen(str3);
-	char *res = (char*)malloc(str_res_len);
-	snprintf(res, str_res_len, "%s%s%s", str1, str2, str3);
-	return res;
+static char* concat(int count, ...) {
+	va_list ap;
+	int i;
+
+	// Find required length to store merged string
+	int len = 1; // room for NULL
+	va_start(ap, count);
+	for(i=0 ; i<count ; i++)
+		len += strlen(va_arg(ap, const char*));
+	va_end(ap);
+
+		// Allocate memory to concat strings
+	char *merged = calloc(sizeof(char),len);
+	int null_pos = 0;
+
+	// Actually concatenate strings
+	va_start(ap, count);
+	for(i=0 ; i<count ; i++)
+	{
+		char *s = va_arg(ap, char*);
+		strcpy(merged+null_pos, s);
+		null_pos += strlen(s);
+	}
+	va_end(ap);
+
+	return merged;
 }
 
 // IO via PAM, main function and helpers
@@ -190,14 +206,14 @@ static int pam_lua_getenv(lua_State* L) {
 static int pam_lua_setenv(lua_State* L) {
 	const char* key = luaL_checkstring(L, 1);
 	if (lua_isnil(L, 2)) {
-		char* str = concat_strings2(key, "=");
+		char* str = concat(2, key, "=");
 		int ret = pam_putenv(_pamhandle, str);
 		free(str);
 		lua_pushboolean(L, ret == PAM_SUCCESS);
 		return 1;
 	}
 	const char* value = luaL_checkstring(L, 2);
-	char* str = concat_strings3(key, "=", value);
+	char* str = concat(3, key, "=", value);
 	int ret = pam_putenv(_pamhandle, str);
 	free(str);
 	lua_pushboolean(L, ret == PAM_SUCCESS);

@@ -29,4 +29,4 @@ end
 if not arg["script"] then
 	error("No script given. Pass script=/path/to/script.lua in the arguments of the pam module.")
 end
-dofile(arg[script])
+return dofile(arg[script])

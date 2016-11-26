@@ -1,1 +1,4 @@
+# Generated/compiled files
 pam_lua.so
+src/bin2c
+src/bootcode.h

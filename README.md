@@ -61,6 +61,12 @@ end
 - `numerical_return_code = pam.ret[textual_return_code]`
   - The opposite of the above.
 
+- `value = pam.getenv(key)`
+  - Returns the environment variable in the PAM env.
+
+- `return_code = pam.setenv(key[, value])`
+  - Set an environment variable in the PAM env. If value is not given, `key` will be deleted instead of set.
+
 Make sure to return a return code, like `pam.ret.success` or `pam.ret.perm_denied`.
 
 ## License

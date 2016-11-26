@@ -3,7 +3,6 @@
 -- Parse args.
 arg = {}
 do
-	local no=1 -- index for non key-value args
 	for i=1, #pam.args do
 		local str = pam.args[i]
 		
@@ -13,8 +12,7 @@ do
 			local value = string.sub(str, equals_pos+1)
 			arg[key] = value
 		else
-			arg[no] = str
-			no = no + 1
+			arg[str] = true
 		end
 	end
 end

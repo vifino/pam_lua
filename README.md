@@ -25,7 +25,7 @@ if pam.type == "authenticate" then
 	end
 	return pam.ret.perm_denied
 else
-	return pam.ret.service_err
+	return pam.ret.ignore
 end
 ```
 - Edit a PAM config file and add a line using `pam_lua.so`, say `auth	sufficient	pam_lua.so script=/path/to/script.lua` 

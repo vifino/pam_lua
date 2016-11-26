@@ -225,7 +225,7 @@ static int pam_lua_setenv(lua_State* L) {
 ////
 // pam_lua handler, this is where the magic happens.
 ////
-static int pam_lua_handler(char* pam_type, pam_handle_t *pamh, int flags, int argc, const char **argv) {
+static int pam_lua_handler(char* pam_hook_type, pam_handle_t *pamh, int flags, int argc, const char **argv) {
 	// Set global pamhandle to this one.
 	_pamhandle = pamh;
 	// Init Lua state
@@ -235,7 +235,20 @@ static int pam_lua_handler(char* pam_type, pam_handle_t *pamh, int flags, int ar
 	lua_newtable(L);
 	{
 		// PAM call type
-		ltable_push_str(L, "type", pam_type);
+		ltable_push_str(L, "handler", pam_hook_type);
+		char* pam_mod_type;
+		
+		if (!(strcmp(pam_hook_type, "setcred") || strcmp(pam_hook_type, "authenticate"))) {
+				pam_mod_type = "auth";
+		} else if (strcmp(pam_hook_type, "acct_mgnt") == 0) {
+				pam_mod_type = "account";
+		} else if (!(strcmp(pam_hook_type, "open_session") || strcmp(pam_hook_type, "close_session"))) {
+				pam_mod_type = "session";
+		} else if (strcmp(pam_hook_type, "chauthtok") == 0) {
+				pam_mod_type = "password";
+		}
+		
+		ltable_push_str(L, "type", pam_mod_type);
 
 		// Args
 		lua_pushstring(L, "args");

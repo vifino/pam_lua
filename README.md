@@ -33,7 +33,13 @@ end
 
 ## API
 - `pam.type`
-  - Returns the PAM hook type, one of the following:
+  - The invoked module call type, one of the following:
+    - `auth`
+    - `account`
+    - `session`
+    - `password`
+- `pam.hook`
+  - The PAM hook type, one of the following:
     - `setcred`
     - `authenticate`
     - `acc_mgnt`

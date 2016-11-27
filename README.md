@@ -17,7 +17,7 @@ A PAM module scriptable using Lua.
 - Copy `pam_lua.so` to `/lib/security` or alternative for your distribution.
 - Make a Lua script, similar to this (untested) script:
 ```lua
-if pam.type == "authenticate" then
+if pam.handler == "authenticate" then
 	local username = pam.get_user()
 	local password = pam.readline(false, "Password: ")
 	if username == "user" and password == "letmein" then
@@ -88,6 +88,8 @@ end
   - Set an environment variable in the PAM env. If value is not given, `key` will be deleted instead of set.
 
 Make sure to return a return code, like `pam.ret.success` or `pam.ret.perm_denied`.
+
+If you do not plan to do anything in a specific PAM hook, return `pam.ret.ignore`.
 
 ## License
 MIT

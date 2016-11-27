@@ -29,7 +29,7 @@ static char* concat(int count, ...) {
 		len += strlen(va_arg(ap, const char*));
 	va_end(ap);
 
-		// Allocate memory to concat strings
+	// Allocate memory to concat strings
 	char *merged = calloc(len, sizeof(char));
 	int null_pos = 0;
 
@@ -79,11 +79,13 @@ int pam_readline(const pam_handle_t *pamh, int visible, const char* str, char* *
 	}
 
 	if (resp) {
-		res = (char**)resp[0].resp;
+		char* tres = resp[0].resp;
+		*res = calloc(strlen(tres), sizeof(char));
+		strcpy(*res, tres);
 		resp[0].resp = NULL;
-	} else {
-		return PAM_CONV_ERR;
+		return PAM_SUCCESS;
 	}
+	return PAM_CONV_ERR;
 }
 
 int pam_info(const pam_handle_t *pamh, const char* str) {
@@ -178,6 +180,7 @@ static int pam_lua_readline(lua_State* L) {
 		return 2;
 	}
 	lua_pushstring(L, res);
+	free(res);
 	return 1;
 }
 
@@ -243,7 +246,7 @@ static int pam_lua_handler(char* pam_hook_type, pam_handle_t *pamh, int flags, i
 		// PAM call type
 		ltable_push_str(L, "handler", pam_hook_type);
 		char* pam_mod_type;
-		
+
 		if (!(strcmp(pam_hook_type, "setcred") || strcmp(pam_hook_type, "authenticate"))) {
 				pam_mod_type = "auth";
 		} else if (strcmp(pam_hook_type, "acct_mgnt") == 0) {
@@ -253,7 +256,7 @@ static int pam_lua_handler(char* pam_hook_type, pam_handle_t *pamh, int flags, i
 		} else if (strcmp(pam_hook_type, "chauthtok") == 0) {
 				pam_mod_type = "password";
 		}
-		
+
 		ltable_push_str(L, "type", pam_mod_type);
 
 		// Flags
@@ -339,15 +342,16 @@ static int pam_lua_handler(char* pam_hook_type, pam_handle_t *pamh, int flags, i
 	// Let the magic happen.
 	luaL_openlibs(L);
 
-	int ret;
 	int lret = luaL_dostring(L, pam_lua_bootcode);
-	if (ret != 0) {
+	if (lret != 0) {
 		pam_error(pamh, lua_tostring(L, -1));
-		ret = PAM_SERVICE_ERR;
+		lua_close(L);
+		return PAM_SERVICE_ERR;
 	}
 
 	// If the code returned a return value, use it,
 	// otherwise return error.
+	int ret;
 	if (lua_isnumber(L, -1)) {
 		ret = lua_tonumber(L, -1);
 	} else {

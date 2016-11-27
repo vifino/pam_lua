@@ -24,7 +24,7 @@ for k, v in pairs(pam.ret) do
 end
 
 -- Try to run script.
-if not arg["script"] then
+if not arg.script then
 	error("No script given. Pass script=/path/to/script.lua in the arguments of the pam module.")
 end
-return dofile(arg[script])
+return dofile(arg.script)

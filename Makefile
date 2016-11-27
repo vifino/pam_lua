@@ -7,7 +7,7 @@ BOOTCODE?=src/bootcode.lua
 RESULTS= pam_lua.so src/bin2c src/bootcode.h
 
 LUA_VER=5.1
-CFLAGS= -O2 -Isrc `pkg-config --cflags lua${LUA_VER}`
+CFLAGS+= -O2 -Isrc `pkg-config --cflags lua${LUA_VER}`
 LDFLAGS= -lpam `pkg-config --libs lua${LUA_VER}`
 
 # Rules

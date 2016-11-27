@@ -201,7 +201,7 @@ static int pam_lua_get_user(lua_State* L) {
 
 	lua_pushstring(L, user);
 	return 1;
-};
+}
 
 // env
 static int pam_lua_getenv(lua_State* L) {

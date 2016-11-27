@@ -30,7 +30,9 @@ static char* concat(int count, ...) {
 	va_end(ap);
 
 	// Allocate memory to concat strings
-	char *merged = calloc(len, sizeof(char));
+	char* merged = calloc(len, sizeof(char));
+	if (merged == NULL)
+		return NULL;
 	int null_pos = 0;
 
 	// Actually concatenate strings
@@ -81,6 +83,8 @@ int pam_readline(const pam_handle_t *pamh, int visible, const char* str, char* *
 	if (resp) {
 		char* tres = resp[0].resp;
 		*res = calloc(strlen(tres), sizeof(char));
+		if (*res == NULL)
+			return PAM_BUF_ERR; // allocation failure
 		strcpy(*res, tres);
 		resp[0].resp = NULL;
 		return PAM_SUCCESS;
@@ -218,6 +222,8 @@ static int pam_lua_setenv(lua_State* L) {
 	const char* key = luaL_checkstring(L, 1);
 	if (lua_isnil(L, 2)) {
 		char* str = concat(2, key, "=");
+		if (str == NULL)
+			return luaL_error(L, "memory allocation failure");
 		int ret = pam_putenv(_pamhandle, str);
 		free(str);
 		lua_pushboolean(L, ret == PAM_SUCCESS);
@@ -225,6 +231,8 @@ static int pam_lua_setenv(lua_State* L) {
 	}
 	const char* value = luaL_checkstring(L, 2);
 	char* str = concat(3, key, "=", value);
+	if (str == NULL)
+			return luaL_error(L, "memory allocation failure");
 	int ret = pam_putenv(_pamhandle, str);
 	free(str);
 	lua_pushboolean(L, ret == PAM_SUCCESS);

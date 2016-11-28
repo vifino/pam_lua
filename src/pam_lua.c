@@ -48,7 +48,11 @@ static char* concat(int count, ...) {
 	return merged;
 }
 
-// IO via PAM, main function and helpers
+////
+// PAM helpers
+////
+
+// I/O
 static int converse(const pam_handle_t *pamh, int nargs, struct pam_message **message, struct pam_response **response) {
 	struct pam_conv *conv;
 
@@ -60,7 +64,7 @@ static int converse(const pam_handle_t *pamh, int nargs, struct pam_message **me
 	return retval;
 }
 
-int pam_readline(const pam_handle_t *pamh, int visible, const char* str, char* *res) {
+static int pam_readline(const pam_handle_t *pamh, int visible, const char* str, char* *res) {
 	// Prepare mesg structs
 	struct pam_message mesg[1], *pmesg[1];
 	pmesg[0] = &mesg[0];
@@ -92,7 +96,7 @@ int pam_readline(const pam_handle_t *pamh, int visible, const char* str, char* *
 	return PAM_CONV_ERR;
 }
 
-int pam_info(const pam_handle_t *pamh, const char* str) {
+static int pam_info(const pam_handle_t *pamh, const char* str) {
 	// Prepare mesg structs
 	struct pam_message mesg[1], *pmesg[1];
 	pmesg[0] = &mesg[0];
@@ -109,7 +113,7 @@ int pam_info(const pam_handle_t *pamh, const char* str) {
 	return PAM_SUCCESS;
 }
 
-int pam_error(const pam_handle_t *pamh, const char* str) {
+static int pam_error(const pam_handle_t *pamh, const char* str) {
 	// Prepare mesg structs
 	struct pam_message mesg[1], *pmesg[1];
 	pmesg[0] = &mesg[0];
@@ -126,7 +130,48 @@ int pam_error(const pam_handle_t *pamh, const char* str) {
 	return PAM_SUCCESS;
 }
 
+// Items
+#define PAM_LUA_PITYPE_STRING 1
+#define PAM_LUA_PITYPE_CONV 2
+#define PAM_LUA_PITYPE_FAIL_DELAY 3
+
+static int pam_get_itype(const char* iname, int *type) {
+	*type = PAM_LUA_PITYPE_STRING;
+	if (strcmp(iname, "service"))
+		return PAM_SERVICE;
+	if (strcmp(iname, "user"))
+		return PAM_USER;
+	if (strcmp(iname, "user_prompt"))
+		return PAM_USER_PROMPT;
+	if (strcmp(iname, "tty"))
+		return PAM_TTY;
+	if (strcmp(iname, "ruser"))
+		return PAM_RUSER;
+	if (strcmp(iname, "rhost"))
+		return PAM_RHOST;
+	if (strcmp(iname, "authtok"))
+		return PAM_AUTHTOK;
+	if (strcmp(iname, "oldauthtok"))
+		return PAM_OLDAUTHTOK;
+	if (strcmp(iname, "conv")) {
+		*type = PAM_LUA_PITYPE_CONV;
+		return PAM_CONV;
+	}
+	if (strcmp(iname, "fail_delay")) {
+		*type = PAM_LUA_PITYPE_FAIL_DELAY;
+		return PAM_FAIL_DELAY;
+	}
+	if (strcmp(iname, "xdisplay"))
+		return PAM_XDISPLAY;
+	if (strcmp(iname, "xauthdata"))
+		return PAM_XAUTHDATA;
+	if (strcmp(iname, "authtok_type"))
+		return PAM_AUTHTOK_TYPE;
+}
+
+////
 // Lua helpers
+////
 static void ltable_push_str(lua_State* L, const char* key, char* value) {
 	lua_pushstring(L, key);
 	lua_pushstring(L, value);
@@ -152,7 +197,7 @@ static void ltable_push_str_bool(lua_State* L, const char* key, int value) {
 ////
 // Lua bindings
 ////
-pam_handle_t *_pamhandle;
+static pam_handle_t *_pamhandle;
 
 // I/O
 static int pam_lua_info(lua_State* L) {
@@ -239,6 +284,55 @@ static int pam_lua_setenv(lua_State* L) {
 	return 1;
 }
 
+// items
+static int pam_lua_get_item(lua_State* L) {
+	const char* iname = luaL_checkstring(L, 1);
+	
+	// get identifier and type of return value
+	int itype;
+	const int itype_no = pam_get_itype(iname, &itype);
+
+	// get stuff
+	const void* data;
+	int ret = pam_get_item(_pamhandle, itype_no, &data);
+	if (ret != PAM_SUCCESS)
+		return luaL_error(L, "could not get item");
+
+	// alright, now we need to return this stuff
+	switch(itype) {
+		case PAM_LUA_PITYPE_STRING:
+			lua_pushstring(L, (char*)data);
+			break;
+		default:
+			luaL_error(L, "couldn't convert non-string item");
+	}
+	return 1;
+}
+
+static int pam_lua_set_item(lua_State* L) {
+	const char* iname = luaL_checkstring(L, 1);
+
+	// get identifier and type of return value
+	int itype;
+	const int itype_no = pam_get_itype(iname, &itype);
+
+	// get data
+	void* data;
+	switch(itype) {
+		case PAM_LUA_PITYPE_STRING:
+			data = (void*) luaL_checkstring(L, 2);
+		default:
+			return luaL_error(L, "item is not type string, can not set");
+	}
+
+	// set data
+	int ret = pam_set_item(_pamhandle, itype_no, data);
+	if (ret != PAM_SUCCESS)
+		return luaL_error(L, "could not set item");
+
+	return 0;
+}
+
 ////
 // pam_lua handler, this is where the magic happens.
 ////
@@ -305,6 +399,10 @@ static int pam_lua_handler(char* pam_hook_type, pam_handle_t *pamh, int flags, i
 		// environment
 		ltable_push_str_func(L, "getenv", pam_lua_getenv);
 		ltable_push_str_func(L, "setenv", pam_lua_setenv);
+
+		// item functions
+		ltable_push_str_func(L, "get_item", pam_lua_get_item);
+		ltable_push_str_func(L, "set_item", pam_lua_set_item);
 
 		// ret: PAM return codes.
 		// It was a pain in the ass to bind them.

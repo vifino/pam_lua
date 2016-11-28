@@ -299,6 +299,11 @@ static int pam_lua_get_item(lua_State* L) {
 		return luaL_error(L, "could not get item");
 
 	// alright, now we need to return this stuff
+	if (data == NULL) {
+		lua_pushnil(L);
+		return 1;
+	}
+
 	switch(itype) {
 		case PAM_LUA_PITYPE_STRING:
 			lua_pushstring(L, (char*)data);
@@ -321,6 +326,7 @@ static int pam_lua_set_item(lua_State* L) {
 	switch(itype) {
 		case PAM_LUA_PITYPE_STRING:
 			data = (void*) luaL_checkstring(L, 2);
+			break;
 		default:
 			return luaL_error(L, "item is not type string, can not set");
 	}

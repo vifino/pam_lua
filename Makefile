@@ -6,7 +6,9 @@ BOOTCODE?=src/bootcode.lua
 
 RESULTS= pam_lua.so src/bin2c src/bootcode.h
 
+# The version of Lua we are compiling and linking against. 5.1 for lua5.1, jit for luajit, etc..
 LUA_VER=5.1
+
 CFLAGS+= -O2 -Isrc `pkg-config --cflags lua${LUA_VER}`
 LDFLAGS= -lpam `pkg-config --libs lua${LUA_VER}`
 

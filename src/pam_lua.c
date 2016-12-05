@@ -15,7 +15,9 @@
 #include <lauxlib.h>
 #include <lualib.h>
 
-// Small helpers
+////
+// Helpers
+////
 
 // varargs concat from http://stackoverflow.com/a/11394336 because i don't like varargs much.
 static char* concat(int count, ...) {
@@ -86,7 +88,7 @@ static int pam_readline(const pam_handle_t *pamh, int visible, const char* str, 
 
 	if (resp) {
 		char* tres = resp[0].resp;
-		*res = calloc(strlen(tres), sizeof(char));
+		*res = calloc(strlen(tres)+1, sizeof(char));
 		if (*res == NULL)
 			return PAM_BUF_ERR; // allocation failure
 		strcpy(*res, tres);
@@ -197,6 +199,7 @@ static void ltable_push_str_bool(lua_State* L, const char* key, int value) {
 ////
 // Lua bindings
 ////
+
 static pam_handle_t *_pamhandle;
 
 // I/O
@@ -340,8 +343,10 @@ static int pam_lua_set_item(lua_State* L) {
 }
 
 ////
-// pam_lua handler, this is where the magic happens.
+// pam_lua handlers
 ////
+
+// Main magic function, it is the backbone of all other hooks.
 static int pam_lua_handler(char* pam_hook_type, pam_handle_t *pamh, int flags, int argc, const char **argv) {
 	// Set global pamhandle to this one.
 	_pamhandle = pamh;

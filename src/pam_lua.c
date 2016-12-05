@@ -92,9 +92,10 @@ static int pam_readline(const pam_handle_t *pamh, int visible, const char* str, 
 		if (*res == NULL)
 			return PAM_BUF_ERR; // allocation failure
 		strcpy(*res, tres);
-		resp[0].resp = NULL;
+		free(resp[0].resp);
 		return PAM_SUCCESS;
 	}
+	free(resp);
 	return PAM_CONV_ERR;
 }
 
@@ -110,8 +111,10 @@ static int pam_info(const pam_handle_t *pamh, const char* str) {
 	int retval;
 	struct pam_response *resp;
 	if ((retval = converse(pamh, 1, pmesg, &resp)) != PAM_SUCCESS) {
+		free(resp);
 		return retval;
 	}
+	free(resp);
 	return PAM_SUCCESS;
 }
 
@@ -127,8 +130,10 @@ static int pam_error(const pam_handle_t *pamh, const char* str) {
 	int retval;
 	struct pam_response *resp;
 	if ((retval = converse(pamh, 1, pmesg, &resp)) != PAM_SUCCESS) {
+		free(resp);
 		return retval;
 	}
+	free(resp);
 	return PAM_SUCCESS;
 }
 

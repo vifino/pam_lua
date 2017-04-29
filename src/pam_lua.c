@@ -1,8 +1,6 @@
 // pam_lua: Scriptable PAM module using Lua
 // Author: Adrian "vifino" Pistol
 
-// Project includes
-#include <bootcode.h>
 // Generic includes
 #include <stdlib.h>
 #include <string.h>
@@ -10,10 +8,14 @@
 // PAM
 #include <security/pam_appl.h>
 #include <security/pam_modules.h>
+#include <pam_compat.h> // our compat.
 // Lua
 #include <lua.h>
 #include <lauxlib.h>
 #include <lualib.h>
+
+// Lua 'bootcode'
+#include <bootcode.h>
 
 ////
 // Helpers
@@ -66,7 +68,7 @@ static int converse(const pam_handle_t *pamh, int nargs, struct pam_message **me
 	return retval;
 }
 
-static int pam_readline(const pam_handle_t *pamh, int visible, const char* str, char* *res) {
+static int pamh_readline(const pam_handle_t *pamh, int visible, const char* str, char* *res) {
 	// Prepare mesg structs
 	struct pam_message mesg[1], *pmesg[1];
 	pmesg[0] = &mesg[0];
@@ -77,7 +79,7 @@ static int pam_readline(const pam_handle_t *pamh, int visible, const char* str, 
 		mesg[0].msg_style = PAM_PROMPT_ECHO_OFF;
 	}
 
-	mesg[0].msg = str;
+	mesg[0].msg = (char*)str;
 
 	// Ask
 	int retval;
@@ -99,13 +101,13 @@ static int pam_readline(const pam_handle_t *pamh, int visible, const char* str, 
 	return PAM_CONV_ERR;
 }
 
-static int pam_info(const pam_handle_t *pamh, const char* str) {
+static int pamh_info(const pam_handle_t *pamh, const char* str) {
 	// Prepare mesg structs
 	struct pam_message mesg[1], *pmesg[1];
 	pmesg[0] = &mesg[0];
 
 	mesg[0].msg_style = PAM_TEXT_INFO;
-	mesg[0].msg = str;
+	mesg[0].msg = (char*)str;
 
 	// Display text
 	int retval;
@@ -118,13 +120,13 @@ static int pam_info(const pam_handle_t *pamh, const char* str) {
 	return PAM_SUCCESS;
 }
 
-static int pam_error(const pam_handle_t *pamh, const char* str) {
+static int pamh_error(const pam_handle_t *pamh, const char* str) {
 	// Prepare mesg structs
 	struct pam_message mesg[1], *pmesg[1];
 	pmesg[0] = &mesg[0];
 
 	mesg[0].msg_style = PAM_ERROR_MSG;
-	mesg[0].msg = str;
+	mesg[0].msg = (char*)str;
 
 	// send error
 	int retval;
@@ -164,6 +166,11 @@ static int pam_get_itype(const char* iname, int *type) {
 		*type = PAM_LUA_PITYPE_CONV;
 		return PAM_CONV;
 	}
+
+	// OS specific stuff
+#ifdef __linux
+	if (strcmp(iname, "authtok_type"))
+		return PAM_AUTHTOK_TYPE;
 	if (strcmp(iname, "fail_delay")) {
 		*type = PAM_LUA_PITYPE_FAIL_DELAY;
 		return PAM_FAIL_DELAY;
@@ -172,8 +179,8 @@ static int pam_get_itype(const char* iname, int *type) {
 		return PAM_XDISPLAY;
 	if (strcmp(iname, "xauthdata"))
 		return PAM_XAUTHDATA;
-	if (strcmp(iname, "authtok_type"))
-		return PAM_AUTHTOK_TYPE;
+#endif
+	return PAM_SYMBOL_ERR;
 }
 
 ////
@@ -210,13 +217,13 @@ static pam_handle_t *_pamhandle;
 // I/O
 static int pam_lua_info(lua_State* L) {
 	const char* text = luaL_checkstring(L, 1);
-	lua_pushnumber(L, pam_info(_pamhandle, text));
+	lua_pushnumber(L, pamh_info(_pamhandle, text));
 	return 1;
 }
 
 static int pam_lua_error(lua_State* L) {
 	const char* text = luaL_checkstring(L, 1);
-	lua_pushnumber(L, pam_error(_pamhandle, text));
+	lua_pushnumber(L, pamh_error(_pamhandle, text));
 	return 1;
 }
 
@@ -226,9 +233,9 @@ static int pam_lua_readline(lua_State* L) {
 	char* res;
 	int ret;
 	if (lua_isstring(L, 2)) {
-		ret = pam_readline(_pamhandle, visible, lua_tostring(L, 2), &res);
+		ret = pamh_readline(_pamhandle, visible, lua_tostring(L, 2), &res);
 	} else {
-		ret = pam_readline(_pamhandle, visible, "", &res);
+		ret = pamh_readline(_pamhandle, visible, "", &res);
 	}
 
 	if (ret != PAM_SUCCESS) {
@@ -453,9 +460,13 @@ static int pam_lua_handler(char* pam_hook_type, pam_handle_t *pamh, int flags, i
 			ltable_push_str_int(L, "abort", PAM_ABORT);
 			ltable_push_str_int(L, "authtok_expired", PAM_AUTHTOK_EXPIRED);
 			ltable_push_str_int(L, "module_unknown", PAM_MODULE_UNKNOWN);
-			ltable_push_str_int(L, "bad_item", PAM_BAD_ITEM);
+			ltable_push_str_int(L, "bad_item", PAMC_BAD_ITEM);
+			ltable_push_str_int(L, "incomplete", PAMC_INCOMPLETE);
+
+			// OS-specific/maybeithasthis stuff
+#ifdef PAM_CONV_AGAIN
 			ltable_push_str_int(L, "conv_again", PAM_CONV_AGAIN);
-			ltable_push_str_int(L, "incomplete", PAM_INCOMPLETE);
+#endif
 		};
 		lua_settable(L, -3);
 	};
@@ -466,7 +477,7 @@ static int pam_lua_handler(char* pam_hook_type, pam_handle_t *pamh, int flags, i
 
 	int lret = luaL_dostring(L, pam_lua_bootcode);
 	if (lret != 0) {
-		pam_error(pamh, lua_tostring(L, -1));
+		pamh_error(pamh, lua_tostring(L, -1));
 		lua_close(L);
 		return PAM_SERVICE_ERR;
 	}

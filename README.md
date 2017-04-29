@@ -4,9 +4,14 @@ A PAM module scriptable using Lua.
 
 ## Dependencies
 - Sane OS/Distro
+  - GNU/Linux works.
+  - FreeBSD should work too, but...
+    - There are minor differences, but should be OK as long as you don't dive too deep.
+    - Less tested.
 - C99 compatible compiler
 - PAM
 - Lua libraries (5.1 and luajit tested)
+  - Anything above 5.1 should work, hopefully.
 
 ## Compiling
 

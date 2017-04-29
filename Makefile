@@ -23,7 +23,7 @@ pam_lua.so: src/pam_lua.c src/bootcode.h
 	${CC} -pedantic -std=c99 -shared -rdynamic -fPIC ${CFLAGS} ${LDFLAGS} -o $@ src/pam_lua.c
 
 src/bin2c: src/bin2c.c
-	${CC} ${CFLAGS} -o $@ $^
+	${CC} ${CFLAGS} -Wno-unused-result -o $@ $^
 
 src/bootcode.h: src/bin2c ${BOOTCODE}
 	$^ $@ pam_lua_bootcode

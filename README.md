@@ -15,7 +15,9 @@ A PAM module scriptable using Lua.
 
 ## Compiling
 
-`make LUA_VER=5.1`
+`make lua=5.1`
+
+Set `5.1` to whatever Lua version you want to use, according to pkg-config, `5.1`/`-5.1` for Lua 5.1, `jit` for luajit, etc...
 
 ## Using
 

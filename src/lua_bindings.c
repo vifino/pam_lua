@@ -18,14 +18,14 @@ static int pam_lua_error(lua_State* L) {
 }
 
 static int pam_lua_readline(lua_State* L) {
-	int visible = lua_toboolean(L, 1);
+	const char* text = luaL_checkstring(L, 1);
 
 	char* res;
 	int ret;
-	if (lua_isstring(L, 2)) {
-		ret = pamh_readline(_pamhandle, visible, lua_tostring(L, 2), &res);
+	if (lua_isboolean(L, 2)) {
+		ret = pamh_readline(_pamhandle, lua_toboolean(L, 2), text, &res);
 	} else {
-		ret = pamh_readline(_pamhandle, visible, "", &res);
+		ret = pamh_readline(_pamhandle, 1, text, &res);
 	}
 
 	if (ret != PAM_SUCCESS) {

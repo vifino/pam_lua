@@ -26,13 +26,13 @@ Set `5.1` to whatever Lua version you want to use, according to pkg-config, `5.1
 ```lua
 if pam.handler == "authenticate" then
 	local username = pam.get_user()
-	local password = pam.readline(false, "Password: ")
+	local password = pam.readline("Password: ", false) -- password prompt with hidden input
 	if username == "user" and password == "letmein" then
-		return pam.ret.success
+		return pam.ret.success -- correct credentials, allow login!
 	end
 	return pam.ret.perm_denied
-else
-	return pam.ret.ignore
+else -- not authenticate
+	return pam.ret.ignore -- ignore this handler, cause it doesn't apply.
 end
 ```
 - Edit a PAM config file and add a line using `pam_lua.so`, say `auth	sufficient	pam_lua.so script=/path/to/script.lua` 
@@ -72,7 +72,7 @@ end
 - `user = pam.get_user([login_prompt])`
   - Returns the username, with prompt if not asked before.
 
-- `input[, failure_code] = pam.readline(visible, prompt)`
+- `input[, failure_code] = pam.readline(prompt[, visible])`
   - Generic text input, if `visible` is `false` then the input is hidden.
   - If getting input fails, it returns `nil, error_code`, which is the numerical representation of a PAM error.
 
@@ -87,6 +87,12 @@ end
 
 - `numerical_return_code = pam.ret[textual_return_code]`
   - The opposite of the above.
+  - Some important codes:
+    - `"ignore"`: Skip handler.
+    - `"success"`: Success, allow login/go to next handler.
+    - `"perm_denied"`: Permission denied, drop out if handler is required.
+    - `"abort"`: Abort.
+    - `"try_again"`: Try again!
 
 - `value = pam.getenv(key)`
   - Returns the environment variable in the PAM env.

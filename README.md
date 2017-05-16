@@ -45,7 +45,7 @@ end
     - `account`
     - `session`
     - `password`
-- `pam.hook`
+- `pam.handler`
   - The PAM hook type, one of the following:
     - `setcred`
     - `authenticate`

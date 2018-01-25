@@ -5,11 +5,10 @@ A PAM module scriptable using Lua.
 ## Dependencies
 - Sane OS/Distro
   - GNU/Linux works.
-  - FreeBSD should work too, but...
-    - There are minor differences, but should be OK as long as you don't dive too deep.
-    - Less tested.
+  - FreeBSD works too, but...
+    - There are minor differences, but should be OK as long as you don't dive too deep..
 - C99 compatible compiler
-- PAM
+- Open PAM or Linux PAM. Might work with other PAM variants, dunno.
 - Lua libraries (5.1 and luajit tested)
   - Anything above 5.1 should work, hopefully.
 
@@ -21,7 +20,8 @@ Set `5.1` to whatever Lua version you want to use, according to pkg-config, `5.1
 
 ## Using
 
-- Copy `pam_lua.so` to `/lib/security` or alternative for your distribution.
+- Copy `pam_lua.so` to `/lib/security` or alternative for wherever your distribution wants PAM modules to reside in.
+  - On FreeBSD, copy it to `/usr/lib`.
 - Make a Lua script, similar to this (untested) script:
 ```lua
 if pam.handler == "authenticate" then
@@ -37,6 +37,11 @@ end
 ```
 - Edit a PAM config file and add a line using `pam_lua.so`, say `auth	sufficient	pam_lua.so script=/path/to/script.lua` 
   - Note: If the script is incorrect, you might not be able to log in. If it contains backdoors, someone else might get in...
+
+## Examples
+
+A dynamic MOTD generator I made is here: [motd.lua](https://gist.github.com/vifino/b95713dcdf174ba96aa743264b107ff2).
+It ain't the prettiest code-wise, but it does the job. Ships with Clippy!
 
 ## API
 - `pam.type`
